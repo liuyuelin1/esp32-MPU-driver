@@ -29,8 +29,8 @@
 
 static const char* TAG = "example";
 
-static constexpr gpio_num_t SDA = GPIO_NUM_22;
-static constexpr gpio_num_t SCL = GPIO_NUM_23;
+static constexpr gpio_num_t SDA = GPIO_NUM_4;
+static constexpr gpio_num_t SCL = GPIO_NUM_5;
 static constexpr uint32_t CLOCK_SPEED = 400000;  // range from 100 KHz ~ 400Hz
 
 extern "C" void app_main() {
@@ -67,6 +67,8 @@ extern "C" void app_main() {
 
     // Initialize
     ESP_ERROR_CHECK(MPU.initialize());  // initialize the chip and set initial configurations
+    ESP_ERROR_CHECK(MPU.setAuxI2CBypass(false));//取消旁路接入
+    ESP_ERROR_CHECK(MPU.setAuxI2CEnabled(true));//允许mpu9250主模式读取寄存器
     // Setup with your configurations
     // ESP_ERROR_CHECK(MPU.setSampleRate(50));  // set sample rate to 50 Hz
     // ESP_ERROR_CHECK(MPU.setGyroFullScale(mpud::GYRO_FS_500DPS));
@@ -74,21 +76,12 @@ extern "C" void app_main() {
 
     // Reading sensor data
     printf("Reading sensor data:\n");
-    mpud::raw_axes_t accelRaw;   // x, y, z axes as int16
-    mpud::raw_axes_t gyroRaw;    // x, y, z axes as int16
-    mpud::float_axes_t accelG;   // accel axes in (g) gravity format
-    mpud::float_axes_t gyroDPS;  // gyro axes in (DPS) º/s format
+    mpud::sensors_t sensors;
     while (true) {
-        // Read
-        MPU.acceleration(&accelRaw);  // fetch raw data from the registers
-        MPU.rotation(&gyroRaw);       // fetch raw data from the registers
-        // MPU.motion(&accelRaw, &gyroRaw);  // read both in one shot
-        // Convert
-        accelG = mpud::accelGravity(accelRaw, mpud::ACCEL_FS_4G);
-        gyroDPS = mpud::gyroDegPerSec(gyroRaw, mpud::GYRO_FS_500DPS);
-        // Debug
-        printf("accel: [%+6.2f %+6.2f %+6.2f ] (G) \t", accelG.x, accelG.y, accelG.z);
-        printf("gyro: [%+7.2f %+7.2f %+7.2f ] (º/s)\n", gyroDPS[0], gyroDPS[1], gyroDPS[2]);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        MPU.sensors(&sensors, 0);
+        printf("A: [%6d,%6d,%6d] (G) \t\n", sensors.accel.x,sensors.accel.y,sensors.accel.z);
+        printf("G: [%6d,%6d,%6d] (G) \t\n", sensors.gyro.x,sensors.gyro.y,sensors.gyro.z);
+        printf("M: [%6d,%6d,%6d] (G) \t\n", sensors.mag.x,sensors.mag.y,sensors.mag.z);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
